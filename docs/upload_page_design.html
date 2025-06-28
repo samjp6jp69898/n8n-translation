@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>n8n 翻譯工具 - 上傳頁面設計</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            color: #ff6d00;
+            margin-bottom: 1rem;
+        }
+        .subtitle {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        .design-container {
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 3rem;
+        }
+        .design-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+        .mockup {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            min-height: 600px;
+            border: 1px solid #eee;
+        }
+        .mockup-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .mockup-title {
+            font-size: 2rem;
+            color: #ff6d00;
+            margin-bottom: 0.5rem;
+        }
+        .mockup-subtitle {
+            color: #666;
+        }
+        .upload-container {
+            max-width: 500px;
+            margin: 0 auto;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            padding: 2rem;
+            border: 1px solid #eee;
+        }
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            background-color: #f9f9f9;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #ff6d00;
+            background-color: #fff9f5;
+        }
+        .upload-icon {
+            font-size: 3rem;
+            color: #ccc;
+            margin-bottom: 1rem;
+        }
+        .upload-text {
+            color: #666;
+        }
+        .file-selected {
+            background-color: #f0f8ff;
+            border: 2px solid #4a90e2;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .file-name {
+            font-weight: 500;
+            color: #333;
+        }
+        .file-size {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+        }
+        .btn-primary {
+            background-color: #ff6d00;
+            color: white;
+            border: none;
+        }
+        .btn-primary:hover {
+            background-color: #e56200;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        .btn-secondary {
+            background-color: #f5f7fa;
+            color: #333;
+            border: 1px solid #ddd;
+            margin-top: 1rem;
+        }
+        .btn-secondary:hover {
+            background-color: #e9ecef;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        .error-message {
+            color: #d9534f;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            background-color: #fdf7f7;
+            padding: 0.5rem;
+            border-radius: 4px;
+            border-left: 3px solid #d9534f;
+        }
+        .result-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .result-header {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        .result-title {
+            font-size: 1.5rem;
+            color: #ff6d00;
+            margin-bottom: 0.5rem;
+        }
+        .result-divider {
+            height: 3px;
+            width: 60px;
+            background-color: #ff6d00;
+            margin-bottom: 1.5rem;
+        }
+        .result-content {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+        .result-table th,
+        .result-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+        .result-table th {
+            background-color: #f9f9f9;
+            font-weight: 600;
+        }
+        .result-stats {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-item {
+            flex: 1;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #ff6d00;
+            margin-bottom: 0.25rem;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .mockup-footer {
+            position: absolute;
+            bottom: 1rem;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #999;
+            font-size: 0.9rem;
+        }
+        .notes {
+            margin-top: 2rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-left: 4px solid #ff6d00;
+            border-radius: 4px;
+        }
+        .notes h3 {
+            margin-bottom: 0.5rem;
+            color: #555;
+        }
+        .notes ul {
+            padding-left: 1.5rem;
+        }
+        .notes li {
+            margin-bottom: 0.5rem;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 2rem;
+        }
+        .tab {
+            padding: 1rem 2rem;
+            background-color: #f5f7fa;
+            border: 1px solid #eee;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .tab:first-child {
+            border-radius: 8px 0 0 8px;
+        }
+        .tab:last-child {
+            border-radius: 0 8px 8px 0;
+        }
+        .tab.active {
+            background-color: #ff6d00;
+            color: white;
+            border-color: #ff6d00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>n8n 翻譯工具 - 視覺設計</h1>
+            <p class="subtitle">上傳頁面設計圖</p>
+        </header>
+
+        <div class="design-container">
+            <h2 class="design-title">上傳頁面設計 - 未上傳狀態</h2>
+            
+            <div class="mockup">
+                <div class="mockup-header">
+                    <h1 class="mockup-title">翻譯檔案處理系統</h1>
+                    <p class="mockup-subtitle">上傳 CSV 檔案進行翻譯分析</p>
+                </div>
+                
+                <div class="tabs">
+                    <div class="tab active">翻譯檔案處理</div>
+                    <div class="tab">照規則修正</div>
+                </div>
+                
+                <div class="upload-container">
+                    <div class="upload-area">
+                        <div class="upload-icon">📄</div>
+                        <p class="upload-text">選擇 CSV 檔案或拖放至此</p>
+                    </div>
+                    
+                    <div class="file-selected">
+                        <div>
+                            <div class="file-name">translations.csv</div>
+                            <div class="file-size">24.5 KB</div>
+                        </div>
+                        <span style="color: #999; cursor: pointer;">✕</span>
+                    </div>
+                    
+                    <button class="btn btn-primary">上傳並分析</button>
+                </div>
+                
+                <div class="mockup-footer">
+                    &copy; 2025 翻譯檔案處理系統
+                </div>
+            </div>
+            
+            <div class="notes">
+                <h3>設計說明：</h3>
+                <ul>
+                    <li>簡潔的上傳介面，支援拖放功能</li>
+                    <li>顯示已選擇的檔案名稱和大小</li>
+                    <li>提供清晰的錯誤提示（如需要時）</li>
+                    <li>頂部標籤頁切換不同功能區域</li>
+                    <li>明顯的上傳按鈕，引導用戶完成操作</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="design-container">
+            <h2 class="design-title">上傳頁面設計 - 分析結果狀態</h2>
+            
+            <div class="mockup">
+                <div class="mockup-header">
+                    <h1 class="mockup-title">翻譯檔案處理系統</h1>
+                    <p class="mockup-subtitle">上傳 CSV 檔案進行翻譯分析</p>
+                </div>
+                
+                <div class="result-container">
+                    <div class="result-header">
+                        <h2 class="result-title">分析結果</h2>
+                        <div class="result-divider"></div>
+                    </div>
+                    
+                    <div class="result-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">125</div>
+                            <div class="stat-label">總翻譯條目</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">18</div>
+                            <div class="stat-label">需要修正</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">107</div>
+                            <div class="stat-label">已通過檢查</div>
+                        </div>
+                    </div>
+                    
+                    <div class="result-content">
+                        <table class="result-table">
+                            <thead>
+                                <tr>
+                                    <th>原文</th>
+                                    <th>翻譯</th>
+                                    <th>問題</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Execute workflow</td>
+                                    <td>執行工作流程</td>
+                                    <td style="color: green;">✓ 通過</td>
+                                </tr>
+                                <tr>
+                                    <td>Save changes</td>
+                                    <td>儲存更改</td>
+                                    <td style="color: orange;">⚠ 建議使用「儲存變更」</td>
+                                </tr>
+                                <tr>
+                                    <td>Delete item</td>
+                                    <td>刪除項目</td>
+                                    <td style="color: green;">✓ 通過</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <a href="#" class="btn btn-secondary">下載完整報告</a>
+                        <button class="btn btn-primary" style="margin-top: 1rem;">上傳新檔案</button>
+                    </div>
+                </div>
+                
+                <div class="mockup-footer">
+                    &copy; 2025 翻譯檔案處理系統
+                </div>
+            </div>
+            
+            <div class="notes">
+                <h3>設計說明：</h3>
+                <ul>
+                    <li>清晰展示分析結果統計數據</li>
+                    <li>表格形式展示翻譯條目及問題</li>
+                    <li>提供下載完整報告的選項</li>
+                    <li>允許用戶上傳新檔案重新開始</li>
+                    <li>使用顏色區分不同狀態的翻譯條目</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

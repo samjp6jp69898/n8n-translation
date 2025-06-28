@@ -1,0 +1,263 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "functionCode": "const input = items.map(item => item.json);\n\nconst groupMap = new Map();\n\nfor (const row of input) {\n  const zh = row['zh-TW'];\n  if (!groupMap.has(zh)) {\n    groupMap.set(zh, []);\n  }\n  groupMap.get(zh).push(row);\n}\n\nconst consistentRows = [];\nconst inconsistentRows = [];\n\nfor (const [zh, rows] of groupMap.entries()) {\n  if (rows.length === 1) {\n    consistentRows.push(...rows);\n  } else {\n    const enSet = new Set(rows.map(r => r['en']));\n    if (enSet.size === 1) {\n      consistentRows.push(...rows);\n    } else {\n      inconsistentRows.push(...rows);\n    }\n  }\n}\n\nreturn [\n  {\n    json: { rows: consistentRows }\n  },\n  {\n    json: { rows: inconsistentRows }\n  }\n];\n"
+      },
+      "id": "9a761279-5f78-4588-a189-ff51eef22d8f",
+      "name": "Classify Translations1",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        160,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "return items[0].json.rows.map(row => ({ json: row }))"
+      },
+      "id": "dd2db69a-56b3-4ac0-9d06-c10aca0236ca",
+      "name": "Split Consistent Rows1",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        380,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "return items[1].json.rows.map(row => ({ json: row }))"
+      },
+      "id": "e24a2c0f-f0b7-4e74-867c-a03860247db8",
+      "name": "Split Inconsistent Rows1",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        380,
+        740
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "fileName": "inconsistent.csv",
+          "headerRow": true
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        740
+      ],
+      "id": "5f8b890d-0b83-42e3-8c2e-3d0aec3b29d4",
+      "name": "Convert to File2"
+    },
+    {
+      "parameters": {
+        "options": {
+          "fileName": "consistent.csv",
+          "headerRow": true
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        540
+      ],
+      "id": "23ebb965-a85d-484b-bc87-b766cb1661f7",
+      "name": "Convert to File3"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "upload-csv",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "dd3fb005-9507-41de-99fc-3bc0ca79aab4",
+      "name": "Webhook Upload1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -280,
+        640
+      ],
+      "webhookId": "fb6e32ac-f74f-4c13-94cb-cf5d64b807b9"
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "file",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        640
+      ],
+      "id": "473ba84d-fbb9-42c4-b481-56b451704955",
+      "name": "Extract from File1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// 找出含有特定關鍵字的檔案\nconst consistentFile = items.find(item => item.binary?.data?.fileName?.includes('consistent'));\nconst inconsistentFile = items.find(item => item.binary?.data?.fileName?.includes('inconsistent'));\n\n// 解析 CSV 並回傳行數\nconst parseCSVRowCount = (binaryData) => {\n  if (!binaryData || !binaryData.data) return 0;\n  const base64 = binaryData.data;\n  const csvContent = Buffer.from(base64, 'base64').toString('utf-8');\n  const lines = csvContent.split('\\n').filter(line => line.trim().length > 0);\n  return Math.max(0, lines.length - 1); // 減去標題行\n};\n\n// 計算筆數\nconst consistentCount = parseCSVRowCount(consistentFile?.binary?.data);\nconst inconsistentCount = parseCSVRowCount(inconsistentFile?.binary?.data);\nconst totalCount = consistentCount + inconsistentCount;\n\n// 產生下載按鈕 HTML\nconst downloadLinks = items.map(item => {\n  const binaryData = item.binary?.data;\n  const base64 = binaryData?.data || '';\n  const name = binaryData?.fileName || item.json?.fileName || 'unknown.csv';\n\n  // 除錯資訊\n  console.log('Binary data structure:', JSON.stringify(item.binary, null, 2));\n  console.log('Base64 length:', base64.length);\n  console.log('File name:', name);\n\n  return `\n    <div class=\"download-item\">\n      <a href=\"data:text/csv;base64,${base64}\" \n         download=\"${name}\" \n         class=\"download-btn\">\n         下載 ${name}\n      </a>\n    </div>`;\n});\n\n// 組成 HTML 字串\nconst html = `\n<html>\n  <head>\n    <style>\n      body {\n        font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n        justify-content: center;\n        margin: 0;\n        padding: 0 20px;\n        background-color: #f5f7fa;\n      }\n      .container {\n        text-align: center;\n        max-width: 600px;\n        width: 100%;\n        padding: 30px;\n        background-color: white;\n        border-radius: 12px;\n        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n        justify-content: center;\n        box-sizing: border-box;\n      }\n      h2 {\n        color: #2c3e50;\n        margin-bottom: 25px;\n        font-size: 1.8rem;\n      }\n      .download-item {\n        margin: 15px 0;\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n        justify-content: center;\n        width: 100%;\n      }\n      .download-btn {\n        display: inline-block;\n        width: 100%;\n        padding: 12px;\n        background-color: #3498db;\n        color: white;\n        text-decoration: none;\n        border-radius: 8px;\n        font-weight: 600;\n        transition: background-color 0.3s ease;\n      }\n      .download-btn:hover {\n        background-color: #2980b9;\n      }\n      .stats-container {\n        display: none;\n      }\n    </style>\n  </head>\n  <body>\n    <div class=\"container\">\n      <div id=\"translation-stats\" class=\"stats-container\"\n           data-total=\"${totalCount}\"\n           data-inconsistent=\"${inconsistentCount}\"\n           data-consistent=\"${consistentCount}\">\n      </div>\n      ${downloadLinks.join('\\n')}\n    </div>\n  </body>\n</html>\n`;\n\nconst parsedHtml = JSON.stringify(html)\n\n// 回傳 HTML 結果與統計資料\nreturn [\n  {\n    json: {\n      parsedHtml,\n      stats: {\n        total: totalCount,\n        inconsistent: inconsistentCount,\n        consistent: consistentCount\n      }\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        640
+      ],
+      "id": "89932206-c40c-4927-8517-84c6ccb87178",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={\n\"html\": {{ $json.parsedHtml }},\n\"stats\": {\n  \"total\":{{ $json.stats.total }},\n  \"inconsistent\":{{ $json.stats.inconsistent }},\n  \"consistent\":{{ $json.stats.consistent }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1260,
+        640
+      ],
+      "id": "d6204c3a-f878-48c2-98cf-2faa2e333b11",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        820,
+        640
+      ],
+      "id": "4f5b63bb-b338-43fe-a316-edc06456a438",
+      "name": "Merge1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Classify Translations1": {
+      "main": [
+        [
+          {
+            "node": "Split Consistent Rows1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split Inconsistent Rows1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Consistent Rows1": {
+      "main": [
+        [
+          {
+            "node": "Convert to File3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Inconsistent Rows1": {
+      "main": [
+        [
+          {
+            "node": "Convert to File2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File2": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Convert to File3": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Upload1": {
+      "main": [
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "Classify Translations1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1349f5b9-1a1f-44c7-951e-bb30afafc2db",
+  "meta": {
+    "instanceId": "a8f3a5408734b8b82e1748d896f5994e81a4e736de1bd32941e0b715386a8824"
+  },
+  "id": "UM9amDjHenUF4kcJ",
+  "tags": []
+}

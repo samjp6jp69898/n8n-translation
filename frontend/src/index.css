@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 保留一些自定義樣式 */
+:root {
+  font-family: system-ui, 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 可以在這裡添加自定義的 Tailwind 擴展樣式 */
+@layer components {
+  /* 您的自定義組件樣式可以放在這裡 */
+}

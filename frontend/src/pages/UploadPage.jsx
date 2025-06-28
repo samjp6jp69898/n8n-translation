@@ -14,6 +14,7 @@ function UploadPage() {
   const [stats, setStats] = useState({ total: 0, inconsistent: 0, consistent: 0 });
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState('upload');
+  const [analysisSuccess, setAnalysisSuccess] = useState(false);
   const fileInputRef = useRef(null);
   const dropAreaRef = useRef(null);
 
@@ -102,6 +103,8 @@ function UploadPage() {
 
       // 解析回傳的 JSON 資料
       const responseData = response.data;
+      console.log(responseData);
+      setAnalysisSuccess(responseData.success === 'true');
       
       setUploadSuccess(true);
       if (responseData && responseData.html) {
@@ -114,7 +117,7 @@ function UploadPage() {
       }
     } catch (err) {
       console.error('上傳失敗:', err);
-      setError('檔案上傳失敗，請稍後再試');
+      setError(err || '檔案上傳失敗，請稍後再試');
     } finally {
       setUploading(false);
     }
@@ -244,29 +247,36 @@ function UploadPage() {
             {htmlContent ? (
               <>
                 <div className="mb-6 text-left">
-                  <div className="mb-4 flex items-center flex-col">
-                    <h2 className="text-2xl font-semibold text-primary mb-2">分析結果</h2>
-                    <div className="h-1 w-20 bg-primary rounded mb-4"></div>
-                  </div>
-                  
-                  {/* 統計數據區塊 */}
-                  <div className="flex gap-4 mb-6 whitespace-nowrap">
-                    <div className="flex-1 bg-gray-50 rounded-lg p-4 text-center">
-                      <div className="text-2xl font-bold text-primary mb-1">{stats.total}</div>
-                      <div className="text-sm text-gray-600">總翻譯條目</div>
-                    </div>
-                    <div className="flex-1 bg-gray-50 rounded-lg p-4 text-center">
-                      <div className="text-2xl font-bold text-orange-500 mb-1">{stats.inconsistent}</div>
-                      <div className="text-sm text-gray-600">需要修正</div>
-                    </div>
-                    <div className="flex-1 bg-gray-50 rounded-lg p-4 text-center">
-                      <div className="text-2xl font-bold text-green-500 mb-1">{stats.consistent}</div>
-                      <div className="text-sm text-gray-600">已通過檢查</div>
-                    </div>
-                  </div>
-                  
-                  {/* 結果內容 */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+                  {analysisSuccess ? (
+                    <>
+                      <div className="mb-4 flex items-center flex-col">
+                        <h2 className="text-2xl font-semibold text-primary mb-2">分析結果</h2>
+                        <div className="h-1 w-20 bg-primary rounded mb-4"></div>
+                      </div>
+                    
+                      {/* 統計數據區塊 */}
+                      <div className="flex gap-4 mb-6 whitespace-nowrap">
+                        <div className="flex-1 bg-gray-50 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-bold text-primary mb-1">{stats.total}</div>
+                          <div className="text-sm text-gray-600">總翻譯條目</div>
+                        </div>
+                        <div className="flex-1 bg-gray-50 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-bold text-orange-500 mb-1">{stats.inconsistent}</div>
+                          <div className="text-sm text-gray-600">需要修正</div>
+                        </div>
+                        <div className="flex-1 bg-gray-50 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-bold text-green-500 mb-1">{stats.consistent}</div>
+                          <div className="text-sm text-gray-600">已通過檢查</div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    null
+                  )
+                }
+                
+                {/* 結果內容 */}
+                <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
                     <div className="prose prose-primary max-w-none" dangerouslySetInnerHTML={{ __html: htmlContent }} />
                   </div>
                 </div>

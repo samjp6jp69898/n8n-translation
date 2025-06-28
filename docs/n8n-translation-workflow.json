@@ -1,5 +1,5 @@
 {
-  "name": "My workflow 2",
+  "name": "n8n translation workflow",
   "nodes": [
     {
       "parameters": {
@@ -8,67 +8,129 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "f9e59b2f-38f2-41ce-8c63-c8b72f63d5b9",
+      "id": "a061cfeb-bb58-4dd7-a6a0-bd90dcf65d9f",
       "name": "Webhook Upload",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        -540,
-        100
+        -2540,
+        80
       ],
-      "webhookId": "fb6e32ac-f74f-4c13-94cb-cf5d64b807b9"
+      "webhookId": "aad97a86-5707-4d8c-8231-3398f57b2642"
     },
     {
       "parameters": {
         "binaryPropertyName": "file",
         "options": {}
       },
+      "id": "671a8fb4-bc7f-4d50-859d-ee58b472dec1",
+      "name": "Extract from File",
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -100,
-        100
-      ],
-      "id": "26fe78a3-9bba-49fd-816b-6a94a06fb0e6",
-      "name": "Extract from File"
+        -2320,
+        80
+      ]
     },
     {
       "parameters": {
-        "functionCode": "try {\n  const input = items.map(item => item.json);\n  \n  // 檢查輸入數據\n  if (!input || input.length === 0) {\n    throw new Error('沒有可處理的翻譯數據');\n  }\n  \n  const groupMap = new Map();\n  \n  for (const row of input) {\n    // 檢查必要欄位\n    if (!row['zh-TW'] || !row['en']) {\n      console.warn('跳過無效行:', row);\n      continue;\n    }\n    \n    const zh = row['zh-TW'];\n    if (!groupMap.has(zh)) {\n      groupMap.set(zh, []);\n    }\n    groupMap.get(zh).push(row);\n  }\n  \n  const consistentRows = [];\n  const inconsistentRows = [];\n  \n  for (const [zh, rows] of groupMap.entries()) {\n    if (rows.length === 1) {\n      consistentRows.push(...rows);\n    } else {\n      const enSet = new Set(rows.map(r => r['en']));\n      if (enSet.size === 1) {\n        consistentRows.push(...rows);\n      } else {\n        inconsistentRows.push(...rows);\n      }\n    }\n  }\n  \n  return [\n    {\n      json: { rows: consistentRows }\n    },\n    {\n      json: { rows: inconsistentRows }\n    }\n  ];\n  \n} catch (error) {\n  return [{\n    json: {\n      error: true,\n      message: `翻譯分類處理錯誤: ${error.message}`,\n      code: 'CLASSIFICATION_ERROR'\n    }\n  }];\n}"
+        "jsCode": "// CSV 數據結構驗證\nconst items = $input.all();\ntry {\n  if (!items || items.length === 0) throw new Error('CSV 檔案解析失敗：無法讀取檔案內容');\n  const requiredColumns = ['zh-TW','en'];\n  const firstItem = items[0];\n  if (!firstItem.json) throw new Error('CSV 格式錯誤：無法解析數據');\n  for (const column of requiredColumns) {\n    if (!(column in firstItem.json)) throw new Error(`CSV 格式錯誤：缺少必要欄位 ${column}`);\n  }\n  if (items.length < 2) throw new Error('CSV 數據不足：至少需要包含標題行和一行數據');\n  let validRowCount = 0;\n  for (const item of items) {\n    const zhTW = item.json['zh-TW'];\n    const en = item.json['en'];\n    if (zhTW && zhTW.trim() && en && en.trim()) validRowCount++;\n  }\n  if (validRowCount === 0) throw new Error('CSV 數據錯誤：未找到有效的翻譯對');\n  return items;\n} catch (error) {\n  return [{ json: { error: true, message: error.message ?? 'csv 格式錯誤', code: 'CSV_VALIDATION_ERROR' } }];\n}"
       },
-      "id": "0e3adabc-3d71-4a88-92e0-a9424ad8635b",
+      "id": "4441753e-1b30-4653-acec-6754e6422409",
+      "name": "Validate CSV Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2100,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              },
+              "id": "1759194f-5421-4f8d-8353-545dd3f278b1"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "looseTypeValidation": true
+        }
+      },
+      "id": "611c52a9-55b0-496f-b49b-135dd869767c",
+      "name": "IF CSV Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1880,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// 分類翻譯\ntry {\n  const input = items.map(item => item.json);\n  if (!input || input.length === 0) throw new Error('沒有可處理的翻譯數據');\n  const groupMap = new Map();\n  for (const row of input) {\n    if (!row['zh-TW'] || !row['en']) continue;\n    const zh = row['zh-TW'];\n    if (!groupMap.has(zh)) groupMap.set(zh, []);\n    groupMap.get(zh).push(row);\n  }\n  const consistentRows = [], inconsistentRows = [];\n  for (const [zh, rows] of groupMap.entries()) {\n    const enSet = new Set(rows.map(r => r['en']));\n    (enSet.size === 1 ? consistentRows : inconsistentRows).push(...rows);\n  }\n  return [ { json: { rows: consistentRows } }, { json: { rows: inconsistentRows } } ];\n} catch (error) {\n  return [{ json: { error: true, message: `翻譯分類處理錯誤: ${error.message}`, code: 'CLASSIFICATION_ERROR' } }];\n}"
+      },
+      "id": "142eec5f-e03e-4c2b-a6f7-d922df4917bf",
       "name": "Classify Translations",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [
-        340,
-        100
+        -1660,
+        -40
       ]
     },
     {
       "parameters": {
-        "functionCode": "return items[0].json.rows.map(row => ({ json: row }))"
+        "jsCode": "const errorMessage = $input.first().json.message;\nconst errorCode = $input.first().json.code;\n\n// 產生錯誤 HTML\nconst errorHtml = `\n<html>\n  <head>\n    <style>\n      body {\n        font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n        justify-content: center;\n        margin: 0;\n        padding: 0 20px;\n        background-color: #f5f7fa;\n        min-height: 100vh;\n      }\n      .container {\n        text-align: center;\n        max-width: 600px;\n        width: 100%;\n        padding: 30px;\n        background-color: white;\n        border-radius: 12px;\n        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n        justify-content: center;\n        box-sizing: border-box;\n      }\n      .error-icon {\n        font-size: 4rem;\n        color: #e74c3c;\n        margin-bottom: 20px;\n      }\n      h2 {\n        color: #e74c3c;\n        margin-bottom: 15px;\n        font-size: 1.8rem;\n      }\n      .error-message {\n        color: #2c3e50;\n        font-size: 1.1rem;\n        line-height: 1.6;\n        margin-bottom: 20px;\n      }\n      .error-code {\n        color: #7f8c8d;\n        font-size: 0.9rem;\n        font-family: monospace;\n        background-color: #ecf0f1;\n        padding: 8px 12px;\n        border-radius: 4px;\n        margin-top: 15px;\n      }\n    </style>\n  </head>\n  <body>\n    <div class=\"container\">\n      <div class=\"error-icon\">⚠️</div>\n      <h2>處理失敗</h2>\n      <div class=\"error-message\">${errorMessage}</div>\n    </div>\n  </body>\n</html>\n`;\n\nconst parsedHtml = JSON.stringify(errorHtml)\n\n// 回傳 JSON 格式\nreturn [{\n  json: {\n    success: false,\n    html: parsedHtml\n  }\n}];"
       },
-      "id": "e4741622-d229-4c33-8f47-4646e25e4b87",
+      "id": "7f1854a6-fffb-42d2-b82d-9b4a326298b9",
+      "name": "Return Error HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1660,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items[0].json.rows.map(row => ({ json: row }))\n"
+      },
+      "id": "b8433572-c998-4006-a21e-1f4da14a1a9a",
       "name": "Split Consistent Rows",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        560,
-        0
+        -1440,
+        -140
       ]
     },
     {
       "parameters": {
-        "functionCode": "return items[1].json.rows.map(row => ({ json: row }))"
+        "jsCode": "return items[1].json.rows.map(row => ({ json: row }))\n"
       },
-      "id": "140b91a8-7f53-421f-9f6d-36eeb4cf935a",
+      "id": "58654c94-0d02-4467-bc24-880c9719db65",
       "name": "Split Inconsistent Rows",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        560,
-        200
+        -1440,
+        80
       ]
     },
     {
@@ -78,14 +140,14 @@
           "headerRow": true
         }
       },
+      "id": "672e2728-9ae9-437b-b153-563bff2a2a41",
+      "name": "Convert to Consistent CSV",
       "type": "n8n-nodes-base.convertToFile",
-      "typeVersion": 1.1,
+      "typeVersion": 1,
       "position": [
-        780,
-        0
-      ],
-      "id": "129adced-f62e-4015-aa7e-46aac069e0cc",
-      "name": "Convert to Consistent CSV"
+        -1220,
+        -140
+      ]
     },
     {
       "parameters": {
@@ -94,112 +156,106 @@
           "headerRow": true
         }
       },
+      "id": "ffdb0fc5-074d-4f42-a1ee-e8632ecaa1c6",
+      "name": "Convert to Inconsistent CSV",
       "type": "n8n-nodes-base.convertToFile",
-      "typeVersion": 1.1,
+      "typeVersion": 1,
       "position": [
-        780,
-        200
-      ],
-      "id": "00b1b493-dc36-4b05-a7a6-b3fd7e315005",
-      "name": "Convert to Inconsistent CSV"
+        -1220,
+        80
+      ]
     },
     {
       "parameters": {},
+      "id": "e22f08de-a4ac-4c8b-a2a5-38b2320ff50f",
+      "name": "Merge CSV Files",
       "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
+      "typeVersion": 1,
       "position": [
-        1000,
-        100
-      ],
-      "id": "acaeb6e9-a5f5-4a40-a3d7-010973571329",
-      "name": "Merge"
+        -1000,
+        -40
+      ]
     },
     {
       "parameters": {
         "jsCode": "const items = $input.all();\n\n// 找出含有特定關鍵字的檔案\nconst consistentFile = items.find(item => item.binary?.data?.fileName?.includes('consistent'));\nconst inconsistentFile = items.find(item => item.binary?.data?.fileName?.includes('inconsistent'));\n\n// 解析 CSV 並回傳行數\nconst parseCSVRowCount = (binaryData) => {\n  if (!binaryData || !binaryData.data) return 0;\n  const base64 = binaryData.data;\n  const csvContent = Buffer.from(base64, 'base64').toString('utf-8');\n  const lines = csvContent.split('\\n').filter(line => line.trim().length > 0);\n  return Math.max(0, lines.length - 1); // 減去標題行\n};\n\n// 計算筆數\nconst consistentCount = parseCSVRowCount(consistentFile?.binary?.data);\nconst inconsistentCount = parseCSVRowCount(inconsistentFile?.binary?.data);\nconst totalCount = consistentCount + inconsistentCount;\n\n// 產生下載按鈕 HTML\nconst downloadLinks = items.map(item => {\n  const binaryData = item.binary?.data;\n  const base64 = binaryData?.data || '';\n  const name = binaryData?.fileName || item.json?.fileName || 'unknown.csv';\n\n  // 除錯資訊\n  console.log('Binary data structure:', JSON.stringify(item.binary, null, 2));\n  console.log('Base64 length:', base64.length);\n  console.log('File name:', name);\n\n  return `\n    <div class=\"download-item\">\n      <a href=\"data:text/csv;base64,${base64}\" \n         download=\"${name}\" \n         class=\"download-btn\">\n         下載 ${name}\n      </a>\n    </div>`;\n});\n\n// 組成 HTML 字串\nconst html = `\n<html>\n  <head>\n    <style>\n      body {\n        font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n        justify-content: center;\n        margin: 0;\n        padding: 0 20px;\n        background-color: #f5f7fa;\n      }\n      .container {\n        text-align: center;\n        max-width: 600px;\n        width: 100%;\n        padding: 30px;\n        background-color: white;\n        border-radius: 12px;\n        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n        justify-content: center;\n        box-sizing: border-box;\n      }\n      h2 {\n        color: #2c3e50;\n        margin-bottom: 25px;\n        font-size: 1.8rem;\n      }\n      .download-item {\n        margin: 15px 0;\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n        justify-content: center;\n        width: 100%;\n      }\n      .download-btn {\n        display: inline-block;\n        width: 100%;\n        padding: 12px;\n        background-color: #3498db;\n        color: white;\n        text-decoration: none;\n        border-radius: 8px;\n        font-weight: 600;\n        transition: background-color 0.3s ease;\n      }\n      .download-btn:hover {\n        background-color: #2980b9;\n      }\n      .stats-container {\n        display: none;\n      }\n    </style>\n  </head>\n  <body>\n    <div class=\"container\">\n      <div id=\"translation-stats\" class=\"stats-container\"\n           data-total=\"${totalCount}\"\n           data-inconsistent=\"${inconsistentCount}\"\n           data-consistent=\"${consistentCount}\">\n      </div>\n      ${downloadLinks.join('\\n')}\n    </div>\n  </body>\n</html>\n`;\n\nconst parsedHtml = JSON.stringify(html)\n\n// 回傳 HTML 結果與統計資料\nreturn [\n  {\n    json: {\n      parsedHtml,\n      stats: {\n        total: totalCount,\n        inconsistent: inconsistentCount,\n        consistent: consistentCount\n      }\n    }\n  }\n];\n"
       },
+      "id": "c781f1d2-a0c4-4de9-bce1-de60953830ea",
+      "name": "Generate HTML",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1440,
-        100
-      ],
-      "id": "5b1386c9-e0fa-49a6-a6bf-c10b0bbad3d2",
-      "name": "generate html & statistics"
+        -780,
+        -40
+      ]
     },
     {
       "parameters": {
         "respondWith": "text",
-        "responseBody": "={\n\"html\": {{ $json.parsedHtml }},\n\"stats\": {\n  \"total\":{{ $json.stats.total }},\n  \"inconsistent\":{{ $json.stats.inconsistent }},\n  \"consistent\":{{ $json.stats.consistent }}\n  }\n}",
+        "responseBody": "={\n\"html\": {{ $json.parsedHtml }},\n\"stats\": {\n  \"total\":{{ $json.stats.total }},\n  \"inconsistent\":{{ $json.stats.inconsistent }},\n  \"consistent\":{{ $json.stats.consistent }}\n  },\n  \"success\": \"true\"\n}",
+        "options": {}
+      },
+      "id": "6f7b065c-f493-46d7-a559-25ff1b7dca1d",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={\n\"html\": {{ $json.html }},\n\"success\": \"false\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1660,
-        100
+        -1440,
+        280
       ],
-      "id": "b4879778-8327-47d8-866f-6ab3153df55b",
-      "name": "Respond to Webhook"
-    },
-    {
-      "parameters": {
-        "jsCode": "// CSV 數據結構驗證\nconst items = $input.all();\n\ntry {\n  // 檢查是否有數據\n  if (!items || items.length === 0) {\n    throw new Error('CSV 檔案解析失敗：無法讀取檔案內容');\n  }\n  \n  // 檢查必要欄位\n  const requiredColumns = ['zh-TW', 'en'];\n  const firstItem = items[0];\n  \n  if (!firstItem.json) {\n    throw new Error('CSV 格式錯誤：無法解析數據');\n  }\n  \n  for (const column of requiredColumns) {\n    if (!(column in firstItem.json)) {\n      throw new Error(`CSV 格式錯誤：缺少必要欄位 \"${column}\"`);\n    }\n  }\n  \n  // 檢查數據行數\n  if (items.length < 2) {\n    throw new Error('CSV 數據不足：至少需要包含標題行和一行數據');\n  }\n  \n  // 驗證數據內容\n  let validRowCount = 0;\n  for (const item of items) {\n    const zhTW = item.json['zh-TW'];\n    const en = item.json['en'];\n    \n    if (zhTW && zhTW.trim() && en && en.trim()) {\n      validRowCount++;\n    }\n  }\n  \n  if (validRowCount === 0) {\n    throw new Error('CSV 數據錯誤：未找到有效的翻譯對');\n  }\n  \n  return items;\n  \n} catch (error) {\n  return [{\n    json: {\n      error: true,\n      message: error.message,\n      code: 'CSV_VALIDATION_ERROR'\n    }\n  }];\n}"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        120,
-        100
-      ],
-      "id": "e6879514-a74b-4275-bc3f-3227a3064d07",
-      "name": "Validate CSV Content"
-    },
-    {
-      "parameters": {
-        "jsCode": "// 檔案格式和大小驗證\nconst items = $input.all();\n\nfor (const item of items) {\n  try {\n    // 檢查是否有檔案\n    if (!item.binary || !item.binary.file) {\n      throw new Error('未找到上傳的檔案');\n    }\n    \n    const file = item.binary.file;\n    const fileName = file.fileName || '';\n    const fileSize = file.fileSize || 0;\n    \n    // 檢查檔案副檔名\n    if (!fileName.toLowerCase().endsWith('.csv')) {\n      throw new Error('檔案格式錯誤：僅支援 CSV 格式');\n    }\n    \n    // 檢查檔案是否為空\n    if (fileSize === 0) {\n      throw new Error('檔案為空：請上傳包含數據的 CSV 檔案');\n    }\n    \n  } catch (error) {\n    return [{\n      json: {\n        error: true,\n        message: error.message,\n        code: 'FILE_VALIDATION_ERROR'\n      }\n    }];\n  }\n}\n\nreturn items;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -320,
-        100
-      ],
-      "id": "b1a53aaf-d76c-4d5b-9d3d-a7941fb981f1",
-      "name": "Validate Uploaded File"
-    },
-    {
-      "parameters": {
-        "jsCode": "// 統一錯誤處理和回應\nconst items = $input.all();\n\n// 檢查是否有錯誤\nconst errorItem = items.find(item => item.json?.error);\n\nif (errorItem) {\n  const errorHtml = `\n  <html>\n    <head>\n      <style>\n        body {\n          font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;\n          display: flex;\n          align-items: center;\n          justify-content: center;\n          min-height: 100vh;\n          margin: 0;\n          background-color: #f8f9fa;\n        }\n        .error-container {\n          text-align: center;\n          max-width: 500px;\n          padding: 40px;\n          background-color: white;\n          border-radius: 12px;\n          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);\n          border-left: 5px solid #e74c3c;\n        }\n        .error-icon {\n          font-size: 3rem;\n          color: #e74c3c;\n          margin-bottom: 20px;\n        }\n        .error-title {\n          color: #2c3e50;\n          font-size: 1.5rem;\n          margin-bottom: 15px;\n        }\n        .error-message {\n          color: #7f8c8d;\n          font-size: 1rem;\n          line-height: 1.6;\n          margin-bottom: 25px;\n        }\n        .retry-btn {\n          display: inline-block;\n          padding: 12px 24px;\n          background-color: #3498db;\n          color: white;\n          text-decoration: none;\n          border-radius: 8px;\n          font-weight: 600;\n          transition: background-color 0.3s ease;\n        }\n        .retry-btn:hover {\n          background-color: #2980b9;\n        }\n      </style>\n    </head>\n    <body>\n      <div class=\"error-container\">\n        <div class=\"error-icon\">⚠️</div>\n        <h2 class=\"error-title\">處理失敗</h2>\n        <p class=\"error-message\">${errorItem.json.message}</p>\n        <a href=\"javascript:history.back()\" class=\"retry-btn\">返回重試</a>\n      </div>\n    </body>\n  </html>\n  `;\n  \n  return [{\n    json: {\n      parsedHtml: JSON.stringify(errorHtml),\n      error: true\n    }\n  }];\n}\n\n// 如果沒有錯誤，繼續正常處理\nreturn items;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1220,
-        100
-      ],
-      "id": "7ca5cc92-47a9-4fa3-b1b9-ed2e7f5788db",
-      "name": "Error Handling of Output CSV Files"
+      "id": "1c3942f1-644e-41d4-ab07-932719e5b3ff",
+      "name": "Respond to Webhook2"
     }
   ],
   "pinData": {},
   "connections": {
-    "Webhook Upload": {
+    "Extract from File": {
       "main": [
         [
           {
-            "node": "Validate Uploaded File",
+            "node": "Validate CSV Content",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract from File": {
+    "Validate CSV Content": {
       "main": [
         [
           {
-            "node": "Validate CSV Content",
+            "node": "IF CSV Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF CSV Error": {
+      "main": [
+        [
+          {
+            "node": "Classify Translations",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Error HTML",
             "type": "main",
             "index": 0
           }
@@ -248,7 +304,7 @@
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Merge CSV Files",
             "type": "main",
             "index": 0
           }
@@ -259,25 +315,25 @@
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Merge CSV Files",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "Merge": {
+    "Merge CSV Files": {
       "main": [
         [
           {
-            "node": "Error Handling of Output CSV Files",
+            "node": "Generate HTML",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "generate html & statistics": {
+    "Generate HTML": {
       "main": [
         [
           {
@@ -288,33 +344,22 @@
         ]
       ]
     },
-    "Validate CSV Content": {
+    "Return Error HTML": {
       "main": [
         [
           {
-            "node": "Classify Translations",
+            "node": "Respond to Webhook2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Validate Uploaded File": {
+    "Webhook Upload": {
       "main": [
         [
           {
             "node": "Extract from File",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Error Handling of Output CSV Files": {
-      "main": [
-        [
-          {
-            "node": "generate html & statistics",
             "type": "main",
             "index": 0
           }
@@ -326,7 +371,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "b21d28fd-9028-4ff3-9e89-74002af060a0",
+  "versionId": "2af3b96e-5897-4cc6-849f-ab1624fa58a7",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7e9d16dc3fe413da898e49c0cf2354188b8e843a78a294f552f634cc74d7a007"

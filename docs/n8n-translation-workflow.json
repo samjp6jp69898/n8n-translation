@@ -1,77 +1,6 @@
 {
-  "name": "My workflow",
+  "name": "My workflow 2",
   "nodes": [
-    {
-      "parameters": {
-        "functionCode": "const input = items.map(item => item.json);\n\nconst groupMap = new Map();\n\nfor (const row of input) {\n  const zh = row['zh-TW'];\n  if (!groupMap.has(zh)) {\n    groupMap.set(zh, []);\n  }\n  groupMap.get(zh).push(row);\n}\n\nconst consistentRows = [];\nconst inconsistentRows = [];\n\nfor (const [zh, rows] of groupMap.entries()) {\n  if (rows.length === 1) {\n    consistentRows.push(...rows);\n  } else {\n    const enSet = new Set(rows.map(r => r['en']));\n    if (enSet.size === 1) {\n      consistentRows.push(...rows);\n    } else {\n      inconsistentRows.push(...rows);\n    }\n  }\n}\n\nreturn [\n  {\n    json: { rows: consistentRows }\n  },\n  {\n    json: { rows: inconsistentRows }\n  }\n];\n"
-      },
-      "id": "9a761279-5f78-4588-a189-ff51eef22d8f",
-      "name": "Classify Translations1",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [
-        160,
-        640
-      ]
-    },
-    {
-      "parameters": {
-        "functionCode": "return items[0].json.rows.map(row => ({ json: row }))"
-      },
-      "id": "dd2db69a-56b3-4ac0-9d06-c10aca0236ca",
-      "name": "Split Consistent Rows1",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [
-        380,
-        540
-      ]
-    },
-    {
-      "parameters": {
-        "functionCode": "return items[1].json.rows.map(row => ({ json: row }))"
-      },
-      "id": "e24a2c0f-f0b7-4e74-867c-a03860247db8",
-      "name": "Split Inconsistent Rows1",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [
-        380,
-        740
-      ]
-    },
-    {
-      "parameters": {
-        "options": {
-          "fileName": "inconsistent.csv",
-          "headerRow": true
-        }
-      },
-      "type": "n8n-nodes-base.convertToFile",
-      "typeVersion": 1.1,
-      "position": [
-        600,
-        740
-      ],
-      "id": "5f8b890d-0b83-42e3-8c2e-3d0aec3b29d4",
-      "name": "Convert to File2"
-    },
-    {
-      "parameters": {
-        "options": {
-          "fileName": "consistent.csv",
-          "headerRow": true
-        }
-      },
-      "type": "n8n-nodes-base.convertToFile",
-      "typeVersion": 1.1,
-      "position": [
-        600,
-        540
-      ],
-      "id": "23ebb965-a85d-484b-bc87-b766cb1661f7",
-      "name": "Convert to File3"
-    },
     {
       "parameters": {
         "httpMethod": "POST",
@@ -79,13 +8,13 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "dd3fb005-9507-41de-99fc-3bc0ca79aab4",
-      "name": "Webhook Upload1",
+      "id": "f9e59b2f-38f2-41ce-8c63-c8b72f63d5b9",
+      "name": "Webhook Upload",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        -280,
-        640
+        -540,
+        100
       ],
       "webhookId": "fb6e32ac-f74f-4c13-94cb-cf5d64b807b9"
     },
@@ -97,11 +26,93 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -60,
-        640
+        -100,
+        100
       ],
-      "id": "473ba84d-fbb9-42c4-b481-56b451704955",
-      "name": "Extract from File1"
+      "id": "26fe78a3-9bba-49fd-816b-6a94a06fb0e6",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "functionCode": "try {\n  const input = items.map(item => item.json);\n  \n  // 檢查輸入數據\n  if (!input || input.length === 0) {\n    throw new Error('沒有可處理的翻譯數據');\n  }\n  \n  const groupMap = new Map();\n  \n  for (const row of input) {\n    // 檢查必要欄位\n    if (!row['zh-TW'] || !row['en']) {\n      console.warn('跳過無效行:', row);\n      continue;\n    }\n    \n    const zh = row['zh-TW'];\n    if (!groupMap.has(zh)) {\n      groupMap.set(zh, []);\n    }\n    groupMap.get(zh).push(row);\n  }\n  \n  const consistentRows = [];\n  const inconsistentRows = [];\n  \n  for (const [zh, rows] of groupMap.entries()) {\n    if (rows.length === 1) {\n      consistentRows.push(...rows);\n    } else {\n      const enSet = new Set(rows.map(r => r['en']));\n      if (enSet.size === 1) {\n        consistentRows.push(...rows);\n      } else {\n        inconsistentRows.push(...rows);\n      }\n    }\n  }\n  \n  return [\n    {\n      json: { rows: consistentRows }\n    },\n    {\n      json: { rows: inconsistentRows }\n    }\n  ];\n  \n} catch (error) {\n  return [{\n    json: {\n      error: true,\n      message: `翻譯分類處理錯誤: ${error.message}`,\n      code: 'CLASSIFICATION_ERROR'\n    }\n  }];\n}"
+      },
+      "id": "0e3adabc-3d71-4a88-92e0-a9424ad8635b",
+      "name": "Classify Translations",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        340,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "return items[0].json.rows.map(row => ({ json: row }))"
+      },
+      "id": "e4741622-d229-4c33-8f47-4646e25e4b87",
+      "name": "Split Consistent Rows",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        560,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "return items[1].json.rows.map(row => ({ json: row }))"
+      },
+      "id": "140b91a8-7f53-421f-9f6d-36eeb4cf935a",
+      "name": "Split Inconsistent Rows",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        560,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "fileName": "consistent.csv",
+          "headerRow": true
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        0
+      ],
+      "id": "129adced-f62e-4015-aa7e-46aac069e0cc",
+      "name": "Convert to Consistent CSV"
+    },
+    {
+      "parameters": {
+        "options": {
+          "fileName": "inconsistent.csv",
+          "headerRow": true
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        200
+      ],
+      "id": "00b1b493-dc36-4b05-a7a6-b3fd7e315005",
+      "name": "Convert to Inconsistent CSV"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1000,
+        100
+      ],
+      "id": "acaeb6e9-a5f5-4a40-a3d7-010973571329",
+      "name": "Merge"
     },
     {
       "parameters": {
@@ -110,11 +121,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1040,
-        640
+        1440,
+        100
       ],
-      "id": "89932206-c40c-4927-8517-84c6ccb87178",
-      "name": "Code1"
+      "id": "5b1386c9-e0fa-49a6-a6bf-c10b0bbad3d2",
+      "name": "generate html & statistics"
     },
     {
       "parameters": {
@@ -125,124 +136,185 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1260,
-        640
+        1660,
+        100
       ],
-      "id": "d6204c3a-f878-48c2-98cf-2faa2e333b11",
-      "name": "Respond to Webhook1"
+      "id": "b4879778-8327-47d8-866f-6ab3153df55b",
+      "name": "Respond to Webhook"
     },
     {
-      "parameters": {},
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
+      "parameters": {
+        "jsCode": "// CSV 數據結構驗證\nconst items = $input.all();\n\ntry {\n  // 檢查是否有數據\n  if (!items || items.length === 0) {\n    throw new Error('CSV 檔案解析失敗：無法讀取檔案內容');\n  }\n  \n  // 檢查必要欄位\n  const requiredColumns = ['zh-TW', 'en'];\n  const firstItem = items[0];\n  \n  if (!firstItem.json) {\n    throw new Error('CSV 格式錯誤：無法解析數據');\n  }\n  \n  for (const column of requiredColumns) {\n    if (!(column in firstItem.json)) {\n      throw new Error(`CSV 格式錯誤：缺少必要欄位 \"${column}\"`);\n    }\n  }\n  \n  // 檢查數據行數\n  if (items.length < 2) {\n    throw new Error('CSV 數據不足：至少需要包含標題行和一行數據');\n  }\n  \n  // 驗證數據內容\n  let validRowCount = 0;\n  for (const item of items) {\n    const zhTW = item.json['zh-TW'];\n    const en = item.json['en'];\n    \n    if (zhTW && zhTW.trim() && en && en.trim()) {\n      validRowCount++;\n    }\n  }\n  \n  if (validRowCount === 0) {\n    throw new Error('CSV 數據錯誤：未找到有效的翻譯對');\n  }\n  \n  return items;\n  \n} catch (error) {\n  return [{\n    json: {\n      error: true,\n      message: error.message,\n      code: 'CSV_VALIDATION_ERROR'\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        820,
-        640
+        120,
+        100
       ],
-      "id": "4f5b63bb-b338-43fe-a316-edc06456a438",
-      "name": "Merge1"
+      "id": "e6879514-a74b-4275-bc3f-3227a3064d07",
+      "name": "Validate CSV Content"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 檔案格式和大小驗證\nconst items = $input.all();\n\nfor (const item of items) {\n  try {\n    // 檢查是否有檔案\n    if (!item.binary || !item.binary.file) {\n      throw new Error('未找到上傳的檔案');\n    }\n    \n    const file = item.binary.file;\n    const fileName = file.fileName || '';\n    const fileSize = file.fileSize || 0;\n    \n    // 檢查檔案副檔名\n    if (!fileName.toLowerCase().endsWith('.csv')) {\n      throw new Error('檔案格式錯誤：僅支援 CSV 格式');\n    }\n    \n    // 檢查檔案是否為空\n    if (fileSize === 0) {\n      throw new Error('檔案為空：請上傳包含數據的 CSV 檔案');\n    }\n    \n  } catch (error) {\n    return [{\n      json: {\n        error: true,\n        message: error.message,\n        code: 'FILE_VALIDATION_ERROR'\n      }\n    }];\n  }\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        100
+      ],
+      "id": "b1a53aaf-d76c-4d5b-9d3d-a7941fb981f1",
+      "name": "Validate Uploaded File"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 統一錯誤處理和回應\nconst items = $input.all();\n\n// 檢查是否有錯誤\nconst errorItem = items.find(item => item.json?.error);\n\nif (errorItem) {\n  const errorHtml = `\n  <html>\n    <head>\n      <style>\n        body {\n          font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;\n          display: flex;\n          align-items: center;\n          justify-content: center;\n          min-height: 100vh;\n          margin: 0;\n          background-color: #f8f9fa;\n        }\n        .error-container {\n          text-align: center;\n          max-width: 500px;\n          padding: 40px;\n          background-color: white;\n          border-radius: 12px;\n          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);\n          border-left: 5px solid #e74c3c;\n        }\n        .error-icon {\n          font-size: 3rem;\n          color: #e74c3c;\n          margin-bottom: 20px;\n        }\n        .error-title {\n          color: #2c3e50;\n          font-size: 1.5rem;\n          margin-bottom: 15px;\n        }\n        .error-message {\n          color: #7f8c8d;\n          font-size: 1rem;\n          line-height: 1.6;\n          margin-bottom: 25px;\n        }\n        .retry-btn {\n          display: inline-block;\n          padding: 12px 24px;\n          background-color: #3498db;\n          color: white;\n          text-decoration: none;\n          border-radius: 8px;\n          font-weight: 600;\n          transition: background-color 0.3s ease;\n        }\n        .retry-btn:hover {\n          background-color: #2980b9;\n        }\n      </style>\n    </head>\n    <body>\n      <div class=\"error-container\">\n        <div class=\"error-icon\">⚠️</div>\n        <h2 class=\"error-title\">處理失敗</h2>\n        <p class=\"error-message\">${errorItem.json.message}</p>\n        <a href=\"javascript:history.back()\" class=\"retry-btn\">返回重試</a>\n      </div>\n    </body>\n  </html>\n  `;\n  \n  return [{\n    json: {\n      parsedHtml: JSON.stringify(errorHtml),\n      error: true\n    }\n  }];\n}\n\n// 如果沒有錯誤，繼續正常處理\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1220,
+        100
+      ],
+      "id": "7ca5cc92-47a9-4fa3-b1b9-ed2e7f5788db",
+      "name": "Error Handling of Output CSV Files"
     }
   ],
   "pinData": {},
   "connections": {
-    "Classify Translations1": {
+    "Webhook Upload": {
       "main": [
         [
           {
-            "node": "Split Consistent Rows1",
+            "node": "Validate Uploaded File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Validate CSV Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Translations": {
+      "main": [
+        [
+          {
+            "node": "Split Consistent Rows",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Split Inconsistent Rows1",
+            "node": "Split Inconsistent Rows",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Split Consistent Rows1": {
+    "Split Consistent Rows": {
       "main": [
         [
           {
-            "node": "Convert to File3",
+            "node": "Convert to Consistent CSV",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Split Inconsistent Rows1": {
+    "Split Inconsistent Rows": {
       "main": [
         [
           {
-            "node": "Convert to File2",
+            "node": "Convert to Inconsistent CSV",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Convert to File2": {
+    "Convert to Consistent CSV": {
       "main": [
         [
           {
-            "node": "Merge1",
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to Inconsistent CSV": {
+      "main": [
+        [
+          {
+            "node": "Merge",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "Convert to File3": {
+    "Merge": {
       "main": [
         [
           {
-            "node": "Merge1",
+            "node": "Error Handling of Output CSV Files",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Webhook Upload1": {
+    "generate html & statistics": {
       "main": [
         [
           {
-            "node": "Extract from File1",
+            "node": "Respond to Webhook",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract from File1": {
+    "Validate CSV Content": {
       "main": [
         [
           {
-            "node": "Classify Translations1",
+            "node": "Classify Translations",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code1": {
+    "Validate Uploaded File": {
       "main": [
         [
           {
-            "node": "Respond to Webhook1",
+            "node": "Extract from File",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Merge1": {
+    "Error Handling of Output CSV Files": {
       "main": [
         [
           {
-            "node": "Code1",
+            "node": "generate html & statistics",
             "type": "main",
             "index": 0
           }
@@ -254,10 +326,11 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "1349f5b9-1a1f-44c7-951e-bb30afafc2db",
+  "versionId": "b21d28fd-9028-4ff3-9e89-74002af060a0",
   "meta": {
-    "instanceId": "a8f3a5408734b8b82e1748d896f5994e81a4e736de1bd32941e0b715386a8824"
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7e9d16dc3fe413da898e49c0cf2354188b8e843a78a294f552f634cc74d7a007"
   },
-  "id": "UM9amDjHenUF4kcJ",
+  "id": "78x0jGHlwO1IktI9",
   "tags": []
 }

@@ -3,6 +3,10 @@ services:
     name: n8n
     env: docker
     plan: free
+    disk:
+      name: n8n-data
+      mountPath: /home/node/.n8n
+      sizeGB: 1
     envVars:
       - key: N8N_BASIC_AUTH_ACTIVE
         value: "true"
@@ -12,6 +16,12 @@ services:
         value: "5678"
       - key: N8N_RUNNERS_ENABLED
         value: "true"
+      - key: DB_TYPE
+        value: "sqlite"
+      - key: DB_SQLITE_PATH
+        value: "/home/node/.n8n/database.sqlite"
+      - key: N8N_ENCRYPTION_KEY
+        sync: false
     autoDeploy: true
   - type: web
     name: n8n-translation-frontend

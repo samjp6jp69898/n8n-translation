@@ -11,3 +11,15 @@ services:
       - key: N8N_PORT
         value: "5678"
     autoDeploy: true
+  - type: web
+    name: n8n-translation-frontend
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -196,7 +196,11 @@ function UploadPage() {
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }}
                   className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer transition-all hover:border-primary hover:bg-orange-50"
                 >
                   <div className="text-4xl mb-3">📄</div>
